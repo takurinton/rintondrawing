@@ -14,8 +14,11 @@ type Pos = {
   y: number;
 }
 
+type DrawingState = 'drawing' | 'resize' | 'drag' | 'drop' | 'inputText' | 'arrow' | 'nothing';
+
 const DrawingModal = () => {
   const ref = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState<DrawingState>('nothing');
   const [mousedownPosition, setMousedownPosition] = useState<Pos>({ x: 0, y: 0 });
   const [mouseupPosition, setMouseupPosition] = useState<Pos>({ x: 0, y: 0 });
   const [children, setChildren] = useState<JSX.Element[]>([]);
@@ -35,13 +38,17 @@ const DrawingModal = () => {
   }, [mousedownPosition, mouseupPosition]);
 
   useEffect(() => {
-    document.addEventListener("mousedown", mousedownFunction, false);
-    return () => document.removeEventListener("mousedown", mousedownFunction, false)
+    if (state === 'drawing') {
+      document.addEventListener("mousedown", mousedownFunction, false);
+      return () => document.removeEventListener("mousedown", mousedownFunction, false);
+    }
   }, [mousedownPosition, mouseupPosition]);
 
   useEffect(() => {
-    document.addEventListener("mouseup", mouseupFunction, false);
-    return () => document.removeEventListener("mouseup", mouseupFunction, false)
+    if (state === 'drawing') {
+      document.addEventListener("mouseup", mouseupFunction, false);
+      return () => document.removeEventListener("mouseup", mouseupFunction, false);
+    }
   }, [mousedownPosition, mouseupPosition]);
 
   return (
