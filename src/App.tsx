@@ -51,18 +51,20 @@ const DrawingModal = ({
 }) => {
   // const parentRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const [draggingTarget, setDraggingTarget] = useState<HTMLDivElement | null>(null);
   const [state, setState] = useState<DrawingState>('nothing');
   const [mousedownPosition, setMousedownPosition] = useState<Pos>({ x: 0, y: 0 });
   const [mouseupPosition, setMouseupPosition] = useState<Pos>({ x: 0, y: 0 });
   const [contents, setContents] = useState<JSX.Element[]>([]);
 
   const onDragStart = useCallback((event) => {
-    event.dataTransfer.setData("text", event.target.id);
+    event.dataTransfer.setData("element", event.target);
   }, []);
 
   const onDrop = useCallback((event) => {
     event.preventDefault();
-    const data = event.dataTransfer.getData("text");
+    const data = event.dataTransfer.getData("element");
+    console.log(data);
     event.target.appendChild(document.getElementById(data));
   }, []);
 
@@ -80,9 +82,23 @@ const DrawingModal = ({
     setContents([...contents, cihld]);
   }, [mousedownPosition, mouseupPosition]);
 
-  const mousemoveFunction = useCallback((event) => {
-    console.log(event.target.id);
-  }, []);
+  // const mousemovedownFunction = useCallback((event) => {
+  //   setDraggingTarget(event.target);
+
+  //   const target = event.target;
+  //   const x = event.pageX;
+  //   const y = event.pageY;
+
+  //   console.log(x, y);
+  // }, []);
+
+  // const mousemoveupFunction = useCallback((event) => {
+  //   const x = event.pageX;
+  //   const y = event.pageY;
+
+  //   console.log(x, y);
+  //   setDraggingTarget(null);
+  // }, []);
 
   useEffect(() => {
     if (state === 'draw') {
@@ -98,14 +114,62 @@ const DrawingModal = ({
     }
   }, [state, mousedownPosition, mouseupPosition]);
 
+  // 全ての要素の紐付け。現状使わないけど後で使う予定なので残す。
+  // useEffect(() => {
+  //   if (state === 'move') {
+  //     Array.prototype.forEach.call(ref.current?.children, target => {
+  //       target.addEventListener("mousedown", mousemovedownFunction, false);
+  //       return () => target.removeEventListener("mousedown", mousemovedownFunction, false);
+  //     });
+  //   }
+  // }, [state]);
+
+  const handleDragstart = (event: any) => {
+    const target = event.target as HTMLDivElement;
+    console.log('in dragstart', target.id);
+    setDraggingTarget(target);
+  }
+
+  const handleDragend = (event: any) => {
+    const target = event.target as HTMLDivElement;
+    const id = target.id;
+    const rect = target.getBoundingClientRect();
+    const top = event.screenY;
+    const left = event.screenX;
+
+    const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${top}-${left}`} onDragStart={onDragStart} />
+    setContents([...contents, content].filter(c => c.props.id !== id));
+    setDraggingTarget(null);
+  }
+
   useEffect(() => {
     if (state === 'move') {
-      Array.prototype.forEach.call(ref.current?.children, target => {
-        target.addEventListener("mousedown", mousemoveFunction, false);
-        return () => target.removeEventListener("mousedown", mousemoveFunction, false);
-      });
+      document.addEventListener('dragstart', handleDragstart, false);
+
+      // ref.current?.addEventListener('dragleave', (event) => {
+      //   console.log('dragleave')
+      //   // console.log('dragleave', event);
+      // }, false);
+
+      // ref.current?.addEventListener('dragenter', (event) => {
+      //   console.log('dragenter')
+      //   // console.log('dragleave', event);
+      // }, false);
+
+      document.addEventListener('dragend', handleDragend, false);
+
+      // ref.current?.addEventListener('drop', (event) => {
+      //   console.log('drop')
+      //   // event.preventDefault();
+      //   // console.log('drop', event);
+      // }, false);
+
+      return () => {
+        document.removeEventListener('dragstart', handleDragstart, false);
+        document.removeEventListener('dragend', handleDragend, false);
+      }
     }
-  }, [state]);
+  }, [state, draggingTarget]);
 
   return (
     <Box position='relative'>
@@ -123,7 +187,7 @@ const DrawingModal = ({
                 {tabs.map((d, i) => <TabPanel key={i.toString()}>{d}</TabPanel>)}
               </TabPanels>
             </Tabs>
-            <Box ref={ref} h='600px' dropzone='move' onDrop={onDrop}>
+            <Box ref={ref} h='600px' dropzone='move' onDrop={onDrop} border="1px gray solid" borderRadius='10px'>
               {contents.map((child, idx) => <React.Fragment key={idx.toString()}>{child}</React.Fragment>)}
             </Box>
           </ModalBody>
