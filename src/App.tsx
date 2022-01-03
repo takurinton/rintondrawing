@@ -57,20 +57,9 @@ const DrawingModal = ({
   const [mouseupPosition, setMouseupPosition] = useState<Pos>({ x: 0, y: 0 });
   const [contents, setContents] = useState<JSX.Element[]>([]);
 
-  const onDragStart = useCallback((event) => {
-    event.dataTransfer.setData("element", event.target);
-  }, []);
-
-  const onDrop = useCallback((event) => {
-    event.preventDefault();
-    const data = event.dataTransfer.getData("element");
-    console.log(data);
-    event.target.appendChild(document.getElementById(data));
-  }, []);
-
   const mousedownFunction = useCallback((event) => {
     setMousedownPosition({ x: event.pageX, y: event.pageY });
-  }, [mousedownPosition, mouseupPosition]);
+  }, [mousedownPosition, mouseupPosition, state]);
 
   const mouseupFunction = useCallback((event) => {
     setMouseupPosition({ x: event.pageX, y: event.pageY });
@@ -82,24 +71,70 @@ const DrawingModal = ({
     setContents([...contents, cihld]);
   }, [mousedownPosition, mouseupPosition]);
 
-  // const mousemovedownFunction = useCallback((event) => {
-  //   setDraggingTarget(event.target);
+  const mousemovedownFunction = useCallback((event) => {
+    setDraggingTarget(event.target);
+  }, []);
 
-  //   const target = event.target;
-  //   const x = event.pageX;
-  //   const y = event.pageY;
+  // DnD 用のコールバック
+  const onDragStart = useCallback((event) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData("element", event.target.id);
+  }, []);
 
-  //   console.log(x, y);
-  // }, []);
+  const onDrop = useCallback((event) => {
+    event.preventDefault();
+    const data = event.dataTransfer.getData("element");
+    console.log(data)
+    // setContents([...contents, data]);
+  }, []);
 
-  // const mousemoveupFunction = useCallback((event) => {
-  //   const x = event.pageX;
-  //   const y = event.pageY;
+  const handleDragstart = useCallback((event) => {
+    const target = event.target as HTMLDivElement;
+    // setDraggingTarget(target);
+  }, [])
 
-  //   console.log(x, y);
-  //   setDraggingTarget(null);
-  // }, []);
+  const handleDragleave = useCallback((event) => {
+    console.log('dragleave')
+  }, [])
 
+  const handleDragenter = useCallback((event) => {
+    console.log('dragenter')
+  }, [])
+
+  const handleDragend = useCallback((event) => {
+    console.log('dragend');
+
+    // const target = event.target as HTMLDivElement;
+    // const id = target.id;
+    // const rect = target.getBoundingClientRect();
+    // const top = event.screenY;
+    // const left = event.screenX;
+    // const top = event.pageY;
+    // const left = event.pageX;
+  }, []);
+
+  const handleDragover = useCallback((event) => {
+    if (event.preventDefault) {
+      event.preventDefault();
+    }
+    event.dataTransfer.dropEffect = 'move';
+    return false;
+  }, []);
+
+  const handleDrop = useCallback((event) => {
+    // const target = event.target as HTMLDivElement;
+    const target = draggingTarget as HTMLDivElement;
+    // const id = target.id;
+    const rect = target.getBoundingClientRect();
+    const top = event.pageY;
+    const left = event.pageX;
+
+    const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${top}-${left}`} onDragStart={onDragStart} />
+    setContents([...contents, content]);
+    setDraggingTarget(null);
+  }, []);
+
+  // 要素を作成するスタートの座標
   useEffect(() => {
     if (state === 'draw') {
       ref.current?.addEventListener("mousedown", mousedownFunction, false);
@@ -107,6 +142,7 @@ const DrawingModal = ({
     }
   }, [state, mousedownPosition, mouseupPosition]);
 
+  // 要素を作成する終わりの座標
   useEffect(() => {
     if (state === 'draw') {
       ref.current?.addEventListener("mouseup", mouseupFunction, false);
@@ -114,59 +150,33 @@ const DrawingModal = ({
     }
   }, [state, mousedownPosition, mouseupPosition]);
 
-  // 全ての要素の紐付け。現状使わないけど後で使う予定なので残す。
-  // useEffect(() => {
-  //   if (state === 'move') {
-  //     Array.prototype.forEach.call(ref.current?.children, target => {
-  //       target.addEventListener("mousedown", mousemovedownFunction, false);
-  //       return () => target.removeEventListener("mousedown", mousemovedownFunction, false);
-  //     });
-  //   }
-  // }, [state]);
-
-  const handleDragstart = (event: any) => {
-    const target = event.target as HTMLDivElement;
-    console.log('in dragstart', target.id);
-    setDraggingTarget(target);
-  }
-
-  const handleDragend = (event: any) => {
-    const target = event.target as HTMLDivElement;
-    const id = target.id;
-    const rect = target.getBoundingClientRect();
-    const top = event.screenY;
-    const left = event.screenX;
-
-    const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${top}-${left}`} onDragStart={onDragStart} />
-    setContents([...contents, content].filter(c => c.props.id !== id));
-    setDraggingTarget(null);
-  }
-
+  // ドラッグ中の要素のセット
   useEffect(() => {
     if (state === 'move') {
-      document.addEventListener('dragstart', handleDragstart, false);
+      Array.prototype.forEach.call(ref.current?.children, target => {
+        target.addEventListener("mousedown", mousemovedownFunction, false);
+        return () => target.removeEventListener("mousedown", mousemovedownFunction, false);
+      });
+    }
+  }, [state]);
 
-      // ref.current?.addEventListener('dragleave', (event) => {
-      //   console.log('dragleave')
-      //   // console.log('dragleave', event);
-      // }, false);
-
-      // ref.current?.addEventListener('dragenter', (event) => {
-      //   console.log('dragenter')
-      //   // console.log('dragleave', event);
-      // }, false);
-
-      document.addEventListener('dragend', handleDragend, false);
-
-      // ref.current?.addEventListener('drop', (event) => {
-      //   console.log('drop')
-      //   // event.preventDefault();
-      //   // console.log('drop', event);
-      // }, false);
+  // 要素のDnDの処理
+  useEffect(() => {
+    if (state === 'move') {
+      ref.current?.addEventListener('dragstart', handleDragstart, false);
+      ref.current?.addEventListener('dragleave', handleDragleave, false);
+      ref.current?.addEventListener('dragenter', handleDragenter, false);
+      ref.current?.addEventListener('dragover', handleDragover, false);
+      ref.current?.addEventListener('dragend', handleDragend, false);
+      ref.current?.addEventListener('drop', handleDrop, false);
 
       return () => {
-        document.removeEventListener('dragstart', handleDragstart, false);
-        document.removeEventListener('dragend', handleDragend, false);
+        ref.current?.removeEventListener('dragstart', handleDragstart, false);
+        ref.current?.removeEventListener('dragleave', handleDragenter, false);
+        ref.current?.removeEventListener('dragenter', handleDragenter, false);
+        ref.current?.removeEventListener('dragover', handleDragover, false);
+        ref.current?.removeEventListener('dragend', handleDragend, false);
+        ref.current?.removeEventListener('dragend', handleDrop, false);
       }
     }
   }, [state, draggingTarget]);
