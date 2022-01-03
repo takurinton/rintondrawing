@@ -72,33 +72,42 @@ const DrawingModal = ({
   }, [mousedownPosition, mouseupPosition]);
 
   const mousemovedownFunction = useCallback((event) => {
-    setDraggingTarget(event.target);
-  }, []);
+    console.log('set current element');
+
+    const target = event.target as HTMLDivElement;
+    setDraggingTarget(target);
+  }, [draggingTarget]);
 
   // DnD 用のコールバック
   const onDragStart = useCallback((event) => {
+    console.log('onDragStart');
+
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData("element", event.target.id);
+    // setDraggingTarget(event.target);
   }, []);
 
   const onDrop = useCallback((event) => {
+    console.log('onDrop');
+
     event.preventDefault();
     const data = event.dataTransfer.getData("element");
-    console.log(data)
     // setContents([...contents, data]);
   }, []);
 
   const handleDragstart = useCallback((event) => {
+    console.log('dragstart');
+
     const target = event.target as HTMLDivElement;
     // setDraggingTarget(target);
   }, [])
 
   const handleDragleave = useCallback((event) => {
-    console.log('dragleave')
+    console.log('dragleave');
   }, [])
 
   const handleDragenter = useCallback((event) => {
-    console.log('dragenter')
+    console.log('dragenter');
   }, [])
 
   const handleDragend = useCallback((event) => {
@@ -114,6 +123,8 @@ const DrawingModal = ({
   }, []);
 
   const handleDragover = useCallback((event) => {
+    console.log('dragover');
+
     if (event.preventDefault) {
       event.preventDefault();
     }
@@ -122,17 +133,19 @@ const DrawingModal = ({
   }, []);
 
   const handleDrop = useCallback((event) => {
-    // const target = event.target as HTMLDivElement;
+    console.log('drop');
+
+    console.log(draggingTarget)
     const target = draggingTarget as HTMLDivElement;
-    // const id = target.id;
-    const rect = target.getBoundingClientRect();
+    const id = target.id;
+    const rect = target !== null ? target.getBoundingClientRect() : { height: 0, width: 0, };
     const top = event.pageY;
     const left = event.pageX;
 
     const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${top}-${left}`} onDragStart={onDragStart} />
-    setContents([...contents, content]);
+    setContents([...contents, content].filter(c => c.props.id !== id));
     setDraggingTarget(null);
-  }, []);
+  }, [draggingTarget]);
 
   // 要素を作成するスタートの座標
   useEffect(() => {
@@ -158,7 +171,7 @@ const DrawingModal = ({
         return () => target.removeEventListener("mousedown", mousemovedownFunction, false);
       });
     }
-  }, [state]);
+  }, [state, draggingTarget]);
 
   // 要素のDnDの処理
   useEffect(() => {
