@@ -112,14 +112,6 @@ const DrawingModal = ({
 
   const handleDragend = useCallback((event) => {
     console.log('dragend');
-
-    // const target = event.target as HTMLDivElement;
-    // const id = target.id;
-    // const rect = target.getBoundingClientRect();
-    // const top = event.screenY;
-    // const left = event.screenX;
-    // const top = event.pageY;
-    // const left = event.pageX;
   }, []);
 
   const handleDragover = useCallback((event) => {
@@ -171,7 +163,7 @@ const DrawingModal = ({
         return () => target.removeEventListener("mousedown", mousemovedownFunction, false);
       });
     }
-  }, [state, draggingTarget]);
+  }, [state, draggingTarget, contents]);
 
   // 要素のDnDの処理
   useEffect(() => {
