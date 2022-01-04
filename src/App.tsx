@@ -146,23 +146,34 @@ const DrawingModal = ({
   }, []);
 
   const handleDrop = useCallback((event) => {
-    console.log('drop');
-
     const target = draggingTarget as HTMLDivElement;
     if (target === null) return;
+
+    console.log('drop');
 
     console.log(draggingTarget)
     const id = target.id;
     const rect = target.getBoundingClientRect();
+
+    console.log(rect, target);
+
     const innerLeft = selectBoxPosition.x - selectBoxRect.x;
     const innerTop = selectBoxPosition.y - selectBoxRect.y;
+    const idTop = event.pageX;
+    const idLeft = event.pageY;
     const top = event.pageY - innerTop;
     const left = event.pageX - innerLeft;
 
-    console.log(selectBoxPosition, selectBoxRect)
-
-    const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${top}-${left}`} onDragStart={onDragStart} />
-    setContents([...contents, content].filter(c => c.props.id !== id));
+    const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${idTop}-${idLeft}`} onDragStart={onDragStart} />
+    console.log([...contents, content].map(c => c.props.id), id);
+    setContents([...contents, content].filter(c => {
+      const t = c.props.id.split('-');
+      const tid = id.split('-');
+      if (Math.abs(Number(t[0]) - Number(tid[0])) < 30 && Math.abs(Number(t[1]) - Number(tid[1])) < 30) {
+        return false;
+      }
+      return true;
+    }));
     setDraggingTarget(null);
   }, [draggingTarget, selectBoxPosition, selectBoxRect]);
 
