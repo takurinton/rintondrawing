@@ -32,6 +32,11 @@ type Pos = {
   y: number;
 }
 
+const initialPosition = {
+  x: 0,
+  y: 0,
+}
+
 type DrawingState = 'draw' | 'resize' | 'move' | 'inputText' | 'arrow' | 'nothing';
 const tabs: DrawingState[] = [
   'draw',
@@ -53,8 +58,10 @@ const DrawingModal = ({
   const ref = useRef<HTMLDivElement>(null);
   const [draggingTarget, setDraggingTarget] = useState<HTMLDivElement | null>(null);
   const [state, setState] = useState<DrawingState>('nothing');
-  const [mousedownPosition, setMousedownPosition] = useState<Pos>({ x: 0, y: 0 });
-  const [mouseupPosition, setMouseupPosition] = useState<Pos>({ x: 0, y: 0 });
+  const [mousedownPosition, setMousedownPosition] = useState<Pos>(initialPosition);
+  const [mouseupPosition, setMouseupPosition] = useState<Pos>(initialPosition);
+  const [selectBoxPosition, setSelectBoxPosition] = useState<Pos>(initialPosition);
+  const [selectBoxRect, setSelectBoxRect] = useState<Pos>(initialPosition);
   const [contents, setContents] = useState<JSX.Element[]>([]);
 
   const mousedownFunction = useCallback((event) => {
@@ -71,16 +78,30 @@ const DrawingModal = ({
     setContents([...contents, cihld]);
   }, [mousedownPosition, mouseupPosition]);
 
+  const mousedownSelectBoxFunction = useCallback((event) => {
+    console.log(event)
+    console.log('mousedown', event.pageX, event.pageY);
+    setSelectBoxPosition({ x: event.pageX, y: event.pageY });
+  }, [draggingTarget, selectBoxPosition, selectBoxRect]);
+
   const mousemovedownFunction = useCallback((event) => {
     console.log('set current element');
 
+    console.log('mousedown', event.target)
+
     const target = event.target as HTMLDivElement;
     setDraggingTarget(target);
-  }, [draggingTarget]);
+
+    const rect = target.getBoundingClientRect();
+    console.log('rect', { x: rect.left, y: rect.top })
+    setSelectBoxRect({ x: rect.left, y: rect.top })
+  }, [draggingTarget, selectBoxPosition, selectBoxRect]);
 
   // DnD 用のコールバック
   const onDragStart = useCallback((event) => {
     console.log('onDragStart');
+
+    console.log('ondragstart', event.target)
 
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData("element", event.target.id);
@@ -127,17 +148,23 @@ const DrawingModal = ({
   const handleDrop = useCallback((event) => {
     console.log('drop');
 
-    console.log(draggingTarget)
     const target = draggingTarget as HTMLDivElement;
+    if (target === null) return;
+
+    console.log(draggingTarget)
     const id = target.id;
-    const rect = target !== null ? target.getBoundingClientRect() : { height: 0, width: 0, };
-    const top = event.pageY;
-    const left = event.pageX;
+    const rect = target.getBoundingClientRect();
+    const innerLeft = selectBoxPosition.x - selectBoxRect.x;
+    const innerTop = selectBoxPosition.y - selectBoxRect.y;
+    const top = event.pageY - innerTop;
+    const left = event.pageX - innerLeft;
+
+    console.log(selectBoxPosition, selectBoxRect)
 
     const content = <Box h={rect?.height} w={rect?.width} top={top} left={left} position='absolute' border='1px solid black' draggable={true} id={`${top}-${left}`} onDragStart={onDragStart} />
     setContents([...contents, content].filter(c => c.props.id !== id));
     setDraggingTarget(null);
-  }, [draggingTarget]);
+  }, [draggingTarget, selectBoxPosition, selectBoxRect]);
 
   // 要素を作成するスタートの座標
   useEffect(() => {
@@ -164,6 +191,13 @@ const DrawingModal = ({
       });
     }
   }, [state, draggingTarget, contents]);
+
+  useEffect(() => {
+    if (state === 'move') {
+      ref.current?.addEventListener("mousedown", mousedownSelectBoxFunction, false);
+      return () => ref.current?.removeEventListener("mousedown", mousedownSelectBoxFunction, false);
+    }
+  }, [state, mousedownPosition, mouseupPosition]);
 
   // 要素のDnDの処理
   useEffect(() => {
